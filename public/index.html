@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Gastos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f1f5f2;--card:#fff;--ink:#14231f;--mute:#5d6f69;--line:#d9e3de;--acc:#1f6f5c;--acc-ink:#fff;--warn:#b42318;--bar:#cfe3da}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1815;--card:#17231f;--ink:#e8f1ed;--mute:#93a9a1;--line:#27382f;--acc:#4fc3a1;--acc-ink:#07130f;--warn:#ff8a7a;--bar:#23382f}}
+*{box-sizing:border-box}
+html{scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Bricolage Grotesque",system-ui,sans-serif}
+a{color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav{max-width:920px;margin:auto;padding:12px 20px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+nav .logo{font-weight:800;font-size:1.15rem;text-decoration:none;margin-right:auto}
+nav a.l{padding:6px 12px;border-radius:8px;text-decoration:none;color:var(--mute)}
+nav a.l.on{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+main{max-width:920px;margin:auto;padding:28px 20px 60px}
+h1{font-size:clamp(2rem,6vw,3.4rem);line-height:1.05;margin:0 0 12px;font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.25rem;margin:0 0 12px}
+p.lead{font-size:1.15rem;color:var(--mute);max-width:52ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.btn.s{padding:5px 10px;font-size:.85rem}.btn.d{color:var(--warn)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+label{display:block;font-size:.9rem;color:var(--mute);margin-bottom:10px}
+input,select{font:inherit;width:100%;margin-top:4px;padding:9px 11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.auth{max-width:400px;margin:20px auto}
+.err{color:var(--warn);min-height:1.4em;font-size:.9rem}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.bar b{font-size:1.2rem;text-transform:capitalize}
+.total{font-size:clamp(2rem,7vw,3rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+.day{display:flex;justify-content:space-between;color:var(--mute);font-size:.9rem;padding:14px 0 6px;text-transform:capitalize}
+.it{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.it .n{flex:1;min-width:0}.it .n small{display:block;color:var(--mute)}
+.it .v{font-weight:600;white-space:nowrap}
+.hb{display:flex;gap:10px;align-items:center;margin:8px 0;font-size:.92rem}
+.hb .nm{width:110px;flex:none}.hb .tr{flex:1;background:var(--bar);border-radius:6px;height:14px}
+.hb .tr i{display:block;height:100%;background:var(--acc);border-radius:6px}.hb .vl{width:100px;text-align:right;flex:none}
+.cols{display:flex;align-items:flex-end;gap:10px;height:150px;margin-top:8px}
+.cols div{flex:1;text-align:center;font-size:.78rem;color:var(--mute);display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.cols i{display:block;background:var(--bar);border-radius:6px 6px 0 0;margin-bottom:4px}.cols .cur i{background:var(--acc)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.stats .card{margin:0}.stats small{color:var(--mute)}.stats b{display:block;font-size:1.4rem}
+.empty{color:var(--mute);padding:20px 0;text-align:center}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);width:min(420px,92vw);padding:20px}
+dialog::backdrop{background:#0008}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;display:none}
+@media(max-width:560px){.hb .nm{width:80px}.hb .vl{width:80px}}
+</style>
+</head>
+<body>
+<header><nav id="nav"></nav></header>
+<main id="app"><p class="empty">Carregando…</p></main>
+<dialog id="dlg">
+  <h2>Editar gasto</h2>
+  <form data-form="edit">
+    <label>Nome<input name="name" required maxlength="80"></label>
+    <div class="row">
+      <label>Valor (R$)<input name="amount" type="number" step="0.01" min="0.01" required></label>
+      <label>Data<input name="date" type="date" required></label>
+    </div>
+    <label>Categoria<select name="category"></select></label>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn" data-act="close">Cancelar</button>
+      <button class="btn p">Salvar alterações</button>
+    </div>
+  </form>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtQGY80Sp4ZcAk5pqd2_GL29jZ5zzKzwE",
+  authDomain: "controle-de-gastos-43857.firebaseapp.com",
+  projectId: "controle-de-gastos-43857",
+  storageBucket: "controle-de-gastos-43857.firebasestorage.app",
+  messagingSenderId: "69872228117",
+  appId: "1:69872228117:web:7da5ce6593b9401364fb1c",
+  measurementId: "G-F8PPZDG3CY"
+};
+const fb = initializeApp(firebaseConfig);
+const auth = getAuth(fb), db = getFirestore(fb);
+
+const CATS = ["Moradia","Alimentação","Transporte","Saúde","Lazer","Educação","Outros"];
+const brl = n => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(n);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = s => document.querySelector(s), app = $("#app");
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+const today = () => { const d=new Date(); return `${ymd(d)}-${String(d.getDate()).padStart(2,"0")}`; };
+const shift = (m,n) => { const [y,mo]=m.split("-").map(Number); return ymd(new Date(y,mo-1+n,1)); };
+const mLabel = (m,short) => new Date(m+"-01T00:00").toLocaleDateString("pt-BR",short?{month:"short"}:{month:"long",year:"numeric"});
+const sum = a => a.reduce((t,e)=>t+e.amount,0);
+
+let user=null, ready=false, expenses=[], unsub=null, month=ymd(new Date());
+const inMonth = m => expenses.filter(e=>e.date.startsWith(m));
+const toast = t => { const el=$("#toast"); el.textContent=t; el.style.display="block"; setTimeout(()=>el.style.display="none",2500); };
+const catOpts = sel => CATS.map(c=>`<option ${c===sel?"selected":""}>${c}</option>`).join("");
+
+onAuthStateChanged(auth, u => {
+  user=u; ready=true; unsub&&unsub(); expenses=[];
+  if(u){
+    unsub = onSnapshot(query(collection(db,"users",u.uid,"expenses"),orderBy("date","desc")),
+      s=>{ expenses=s.docs.map(d=>({id:d.id,...d.data()})); render(); },
+      e=>{ console.error(e); toast("Erro ao carregar gastos. Verifique as regras do Firestore."); });
+  }
+  render();
+});
+
+const views = {
+  "/": () => `
+    <h1>Saiba para onde foi o seu dinheiro este mês.</h1>
+    <p class="lead">Registre cada gasto, acompanhe o mês dia a dia e veja o resumo por categoria. Seus dados ficam salvos na sua conta.</p>
+    <p>${user?`<a class="btn p" href="#/gastos">Abrir meus gastos</a>`:`<a class="btn p" href="#/registro">Criar conta grátis</a> <a class="btn" href="#/login">Entrar com e-mail</a>`}</p>
+    <div class="row" style="margin-top:28px">
+      <div class="card"><h2>Cronograma do mês</h2>Gastos agrupados por dia, com o total de cada dia.</div>
+      <div class="card"><h2>Edite quando quiser</h2>Renomeie, mude valor, data ou categoria de qualquer gasto.</div>
+      <div class="card"><h2>Resumo completo</h2>Total, média diária, maiores gastos e comparação com o mês anterior.</div>
+    </div>`,
+  "/login": () => `
+    <div class="card auth"><h2>Entrar</h2>
+    <form data-form="login">
+      <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+      <label>Senha<input name="password" type="password" autocomplete="current-password" required></label>
+      <div class="err"></div><button class="btn p" style="width:100%">Entrar</button>
+    </form><p style="text-align:center;color:var(--mute)">Não tem conta? <a href="#/registro">Criar conta</a></p></div>`,
+  "/registro": () => `
+    <div class="card auth"><h2>Criar conta</h2>
+    <form data-form="register">
+      <label>Nome<input name="name" autocomplete="name" required maxlength="60"></label>
+      <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+      <label>Senha (mínimo 6 caracteres)<input name="password" type="password" autocomplete="new-password" minlength="6" required></label>
+      <div class="err"></div><button class="btn p" style="width:100%">Criar conta</button>
+    </form><p style="text-align:center;color:var(--mute)">Já tem conta? <a href="#/login">Entrar</a></p></div>`,
+  "/gastos": () => {
+    const list = inMonth(month), days = {};
+    list.forEach(e=>(days[e.date]??=[]).push(e));
+    const body = Object.keys(days).sort().reverse().map(d=>`
+      <div class="day"><span>${new Date(d+"T00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"2-digit",month:"long"})}</span><b>${brl(sum(days[d]))}</b></div>
+      ${days[d].map(e=>`<div class="it"><div class="n">${esc(e.name)}<small>${esc(e.category)}</small></div><span class="v">${brl(e.amount)}</span>
+        <button class="btn s" data-act="edit" data-id="${e.id}">Editar</button>
+        <button class="btn s d" data-act="del" data-id="${e.id}" aria-label="Excluir ${esc(e.name)}">Excluir</button></div>`).join("")}`).join("");
+    return `${monthBar()}
+      <div class="card"><small style="color:var(--mute)">Total gasto no mês</small><div class="total">${brl(sum(list))}</div></div>
+      <div class="card"><h2>Novo gasto</h2><form data-form="add">
+        <div class="row"><label>Nome<input name="name" required maxlength="80" placeholder="Ex.: Mercado"></label>
+        <label>Valor (R$)<input name="amount" type="number" step="0.01" min="0.01" required></label>
+        <label>Data<input name="date" type="date" value="${today()}" required></label>
+        <label>Categoria<select name="category">${catOpts()}</select></label></div>
+        <button class="btn p">Adicionar gasto</button></form></div>
+      <div class="card"><h2>Cronograma</h2>${body||`<p class="empty">Nenhum gasto neste mês. Adicione o primeiro acima.</p>`}</div>`;
+  },
+  "/resumo": () => {
+    const list = inMonth(month), total = sum(list), prev = sum(inMonth(shift(month,-1)));
+    const now = ymd(new Date()), [y,mo] = month.split("-").map(Number);
+    const days = month===now ? new Date().getDate() : new Date(y,mo,0).getDate();
+    const cats = CATS.map(c=>[c,sum(list.filter(e=>e.category===c))]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+    const top = [...list].sort((a,b)=>b.amount-a.amount).slice(0,5);
+    const hist = [5,4,3,2,1,0].map(i=>{const m=shift(month,-i); return [m,sum(inMonth(m))];});
+    const mx = Math.max(...hist.map(h=>h[1]),1);
+    const diff = prev ? ((total-prev)/prev*100) : null;
+    return `${monthBar()}
+      <div class="stats">
+        <div class="card"><small>Total do mês</small><b>${brl(total)}</b></div>
+        <div class="card"><small>Média por dia</small><b>${brl(total/days)}</b></div>
+        <div class="card"><small>Quantidade de gastos</small><b>${list.length}</b></div>
+        <div class="card"><small>Versus mês anterior</small><b>${diff===null?"—":(diff>0?"+":"")+diff.toFixed(1).replace(".",",")+"%"}</b></div>
+      </div>
+      <div class="card"><h2>Por categoria</h2>${cats.length?cats.map(([c,v])=>`<div class="hb"><span class="nm">${c}</span><span class="tr"><i style="width:${v/total*100}%"></i></span><span class="vl">${brl(v)}</span></div>`).join(""):`<p class="empty">Sem gastos neste mês.</p>`}</div>
+      <div class="card"><h2>Maiores gastos</h2>${top.length?top.map(e=>`<div class="it"><div class="n">${esc(e.name)}<small>${esc(e.category)} — ${e.date.split("-").reverse().join("/")}</small></div><span class="v">${brl(e.amount)}</span></div>`).join(""):`<p class="empty">Sem gastos neste mês.</p>`}</div>
+      <div class="card"><h2>Últimos 6 meses</h2><div class="cols">${hist.map(([m,v])=>`<div class="${m===month?"cur":""}"><i style="height:${v/mx*100}px" title="${brl(v)}"></i>${mLabel(m,1)}</div>`).join("")}</div></div>`;
+  }
+};
+const monthBar = () => `<div class="bar"><button class="btn s" data-act="prev">← Anterior</button><b>${mLabel(month)}</b><button class="btn s" data-act="next">Próximo →</button></div>`;
+
+function nav(p){
+  const l = (h,t)=>`<a class="l ${p===h?"on":""}" href="#${h}">${t}</a>`;
+  $("#nav").innerHTML = `<a class="logo" href="#/">Controle de Gastos</a>` + (user
+    ? l("/gastos","Gastos")+l("/resumo","Resumo")+`<button class="btn s" data-act="logout">Sair</button>`
+    : l("/","Início")+l("/login","Entrar")+`<a class="btn p s" href="#/registro">Criar conta</a>`);
+}
+function render(){
+  if(!ready) return;
+  let p = location.hash.slice(1)||"/"; if(!views[p]) p="/";
+  if(["/gastos","/resumo"].includes(p) && !user) return void(location.hash="#/login");
+  if(["/login","/registro"].includes(p) && user) return void(location.hash="#/gastos");
+  nav(p); app.innerHTML = views[p](); window.scrollTo(0,0);
+}
+addEventListener("hashchange",render);
+
+const authErr = c => ({"auth/invalid-credential":"E-mail ou senha incorretos.","auth/invalid-email":"E-mail inválido.","auth/email-already-in-use":"Este e-mail já está cadastrado.","auth/weak-password":"A senha precisa ter pelo menos 6 caracteres.","auth/too-many-requests":"Muitas tentativas. Aguarde um pouco e tente de novo.","auth/operation-not-allowed":"Ative o login por e-mail/senha no Firebase Authentication."}[c]||"Algo deu errado. Tente novamente.");
+const colRef = () => collection(db,"users",user.uid,"expenses");
+const data = f => { const v=Object.fromEntries(new FormData(f)); return {name:v.name.trim(),amount:Math.round(parseFloat(v.amount)*100)/100,date:v.date,category:v.category}; };
+let editId=null;
+
+document.addEventListener("submit", async ev=>{
+  const f=ev.target, k=f.dataset.form; if(!k) return; ev.preventDefault();
+  const err=f.querySelector(".err"), v=Object.fromEntries(new FormData(f));
+  try{
+    if(k==="login") await signInWithEmailAndPassword(auth,v.email,v.password);
+    if(k==="register"){ const c=await createUserWithEmailAndPassword(auth,v.email,v.password); await updateProfile(c.user,{displayName:v.name.trim()}); }
+    if(k==="add"){ await addDoc(colRef(),{...data(f),createdAt:serverTimestamp()}); f.reset(); toast("Gasto adicionado"); }
+    if(k==="edit"){ await updateDoc(doc(db,"users",user.uid,"expenses",editId),data(f)); $("#dlg").close(); toast("Gasto atualizado"); }
+  }catch(e){ console.error(e); err?err.textContent=authErr(e.code):toast("Não foi possível salvar. Tente de novo."); }
+});
+
+document.addEventListener("click", async ev=>{
+  const b=ev.target.closest("[data-act]"); if(!b) return;
+  const a=b.dataset.act, id=b.dataset.id;
+  if(a==="logout") await signOut(auth), location.hash="#/";
+  if(a==="prev"||a==="next"){ month=shift(month,a==="prev"?-1:1); render(); }
+  if(a==="close") $("#dlg").close();
+  if(a==="edit"){
+    const e=expenses.find(x=>x.id===id), f=$("#dlg form"); editId=id;
+    f.name.value=e.name; f.amount.value=e.amount; f.date.value=e.date;
+    f.category.innerHTML=catOpts(e.category); $("#dlg").showModal();
+  }
+  if(a==="del"){
+    const e=expenses.find(x=>x.id===id);
+    if(confirm(`Excluir "${e.name}"?`)) try{ await deleteDoc(doc(db,"users",user.uid,"expenses",id)); toast("Gasto excluído"); }catch(x){ toast("Não foi possível excluir."); }
+  }
+});
+</script>
+</body>
+</html>
